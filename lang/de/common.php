@@ -12,6 +12,10 @@ return [
         'filter' => 'Filter',
         'loading' => 'Wird geladen…',
         'clear_filters' => 'Filter zurücksetzen',
+        'login' => 'Anmelden',
+        'register' => 'Registrieren',
+        'logout' => 'Abmelden',
+        'confirm' => 'Bestätigen',
     ],
     'status' => [
         'active' => 'Aktiv',

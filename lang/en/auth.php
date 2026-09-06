@@ -16,5 +16,29 @@ return [
     'failed' => 'These credentials do not match our records.',
     'password' => 'The provided password is incorrect.',
     'throttle' => 'Too many login attempts. Please try again in :seconds seconds.',
+    'login' => [
+        'title' => 'Log in',
+        'subtitle' => 'Sign in to manage your grocery list.',
+        'submit' => 'Log in',
+        'no_account' => 'Need an account?',
+        'remember' => 'Remember me',
+    ],
+    'register' => [
+        'title' => 'Create account',
+        'subtitle' => 'Register to start your grocery list.',
+        'submit' => 'Create account',
+        'has_account' => 'Already have an account?',
+    ],
+    'forms' => [
+        'name' => 'Name *',
+        'email' => 'Email *',
+        'password' => 'Password *',
+        'password_confirmation' => 'Confirm password *',
+        'name_required' => 'Please enter your name.',
+        'email_required' => 'Please enter your email address.',
+        'email_unique' => 'This email address is already registered.',
+        'password_required' => 'Please enter your password.',
+        'password_confirmed' => 'The password confirmation does not match.',
+    ],
 
 ];

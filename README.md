@@ -31,6 +31,12 @@ composer run dev
 
 This starts the Laravel server, queue worker, log watcher, and Vite.
 
+## Grocery shopping list
+
+Register or log in, then open `/groceries` to manage your personal list: add items, filter by status/category, mark purchased, edit, and delete.
+
+Each account only sees its own items.
+
 ## Tests
 
 ```bash

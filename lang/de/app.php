@@ -3,8 +3,11 @@
 return [
     'welcome' => [
         'title' => 'Family',
-        'subtitle' => 'Das Laravel-Gerüst ist bereit für die Entwicklung.',
-        'contributing' => 'Folgen Sie CONTRIBUTING.md für Code-Stil, Übersetzungen, Sicherheit und Livewire-Muster.',
+        'subtitle' => 'Verwalten Sie die Einkaufsliste Ihres Haushalts.',
+        'contributing' => 'Fügen Sie Artikel hinzu, filtern Sie nach Kategorie und haken Sie sie beim Einkauf ab.',
         'switch_language' => 'Sprache',
+        'cta_login' => 'Anmelden',
+        'cta_register' => 'Konto erstellen',
+        'cta_list' => 'Einkaufsliste öffnen',
     ],
 ];
