@@ -30,6 +30,9 @@
                         <a href="{{ route('groceries.index') }}" class="rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-secondary-600">
                             {{ __('grocery.title') }}
                         </a>
+                        <a href="{{ route('master-data.grocery-products.index') }}" class="rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-secondary-600">
+                            {{ __('grocery.master_data.nav') }}
+                        </a>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="rounded-lg px-3 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-secondary-600">

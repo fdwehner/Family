@@ -16,9 +16,9 @@
                     </button>
                 @endif
             @endcan
-            @can('create', App\Models\GroceryItem::class)
-                <a href="{{ route('groceries.create') }}" class="rounded-lg bg-secondary-500 px-4 py-2 text-white dark:bg-white dark:text-secondary-500">
-                    {{ __('grocery.add_item') }}
+            @can('viewAny', App\Models\GroceryProduct::class)
+                <a href="{{ route('master-data.grocery-products.index') }}" class="rounded-lg bg-secondary-500 px-4 py-2 text-white dark:bg-white dark:text-secondary-500">
+                    {{ __('grocery.master_data.nav') }}
                 </a>
             @endcan
         </div>
@@ -68,7 +68,7 @@
                 {{ __('common.actions.search') }} / {{ __('common.actions.filter') }}
             </span>
             @if ($filtersActive)
-                <span class="rounded-full bg-gray-100 px-2 py-1 text-xs dark:bg-secondary-600">{{ $items->total() }}</span>
+                <span class="rounded-full bg-gray-100 px-2 py-1 text-xs dark:bg-secondary-600">{{ $products->total() }}</span>
             @endif
         </button>
         <div x-cloak x-show="filtersOpen" x-transition class="border-t border-gray-200 px-4 py-4 dark:border-gray-600">
@@ -116,88 +116,109 @@
         <span>{{ __('common.actions.loading') }}</span>
     </div>
 
-    <div wire:loading.remove class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md dark:border-gray-600 dark:bg-secondary-500">
-        <div class="overflow-x-auto">
-            <table class="min-w-full w-full divide-y divide-gray-200 dark:divide-gray-600">
-                <thead class="bg-gray-50 dark:bg-secondary-600">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('grocery.table.item') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('grocery.table.quantity') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('grocery.table.category') }}</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('grocery.table.status') }}</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ __('grocery.table.actions') }}</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200 dark:divide-gray-600">
-                    @forelse ($items as $item)
-                        <tr wire:key="grocery-item-{{ $item->id }}" class="hover:bg-gray-50 dark:hover:bg-secondary-600 transition-colors">
-                            <td class="px-4 py-3">
-                                <div class="font-medium {{ $item->is_purchased ? 'line-through text-gray-400' : '' }}">{{ $item->name }}</div>
-                                @if ($item->notes)
-                                    <div class="text-sm text-gray-400">{{ $item->notes }}</div>
-                                @endif
-                            </td>
-                            <td class="whitespace-nowrap px-4 py-3">
-                                {{ $item->quantity }} {{ $item->unitLabel() }}
-                            </td>
-                            <td class="whitespace-nowrap px-4 py-3">{{ $item->categoryLabel() }}</td>
-                            <td class="whitespace-nowrap px-4 py-3">
-                                {{ $item->is_purchased ? __('grocery.table.purchased') : __('grocery.table.needed') }}
-                            </td>
-                            <td class="whitespace-nowrap px-4 py-3 text-right">
-                                <div class="flex justify-end gap-1">
-                                    @can('togglePurchased', $item)
-                                        <button
-                                            type="button"
-                                            wire:click="togglePurchased({{ $item->id }})"
-                                            class="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-secondary-500"
-                                            title="{{ $item->is_purchased ? __('grocery.mark_needed') : __('grocery.mark_purchased') }}"
-                                            aria-label="{{ $item->is_purchased ? __('grocery.mark_needed') : __('grocery.mark_purchased') }}"
-                                        >
-                                            @if ($item->is_purchased)
-                                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h4l3 8 4-16 3 8h4" /></svg>
-                                            @else
-                                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-                                            @endif
-                                        </button>
-                                    @endcan
-                                    @can('update', $item)
-                                        <a
-                                            href="{{ route('groceries.edit', $item) }}"
-                                            class="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-secondary-500"
-                                            title="{{ __('common.actions.edit') }}"
-                                            aria-label="{{ __('common.actions.edit') }}"
-                                        >
-                                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                                        </a>
-                                    @endcan
-                                    @can('delete', $item)
-                                        <button
-                                            type="button"
-                                            wire:click="requestDelete({{ $item->id }})"
-                                            class="rounded-lg p-2 hover:bg-red-50 dark:hover:bg-red-900/30"
-                                            title="{{ __('common.actions.delete') }}"
-                                            aria-label="{{ __('common.actions.delete') }}"
-                                        >
-                                            <svg class="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 7h12M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m2 0v12a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12z" /></svg>
-                                        </button>
-                                    @endcan
+    <div wire:loading.remove>
+        @if ($products->isEmpty())
+            <div class="rounded-lg border border-gray-200 bg-white px-6 py-12 text-center shadow-md dark:border-gray-600 dark:bg-secondary-500">
+                <p class="text-gray-500 dark:text-gray-400">
+                    {{ $filtersActive ? __('grocery.empty_filtered') : __('grocery.empty') }}
+                </p>
+            </div>
+        @else
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                @foreach ($products as $product)
+                    @php
+                        $line = $listItems->get($product->id);
+                        $quantity = $line ? $line->formattedQuantity() : '0';
+                        $onList = $line !== null;
+                    @endphp
+                    <article
+                        wire:key="grocery-product-{{ $product->id }}"
+                        class="flex flex-col rounded-lg border bg-white p-4 shadow-md dark:bg-secondary-500 {{ $line?->is_purchased ? 'border-gray-200 opacity-70 dark:border-gray-600' : ($onList ? 'border-secondary-500 dark:border-white' : 'border-gray-200 dark:border-gray-600') }}"
+                    >
+                        <div class="mb-3 flex items-start justify-between gap-2">
+                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                {{ $product->categoryLabel() }}
+                            </p>
+                            @if ($onList)
+                                @can('togglePurchased', $line)
+                                    <button
+                                        type="button"
+                                        wire:click="togglePurchased({{ $line->id }})"
+                                        class="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-secondary-600"
+                                        title="{{ $line->is_purchased ? __('grocery.mark_needed') : __('grocery.mark_purchased') }}"
+                                        aria-label="{{ $line->is_purchased ? __('grocery.mark_needed') : __('grocery.mark_purchased') }}"
+                                    >
+                                        @if ($line->is_purchased)
+                                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h4l3 8 4-16 3 8h4" /></svg>
+                                        @else
+                                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                        @endif
+                                    </button>
+                                @endcan
+                            @endif
+                        </div>
+
+                        <div class="mb-3 flex justify-center">
+                            @if ($product->imageUrl())
+                                <img
+                                    src="{{ $product->imageUrl() }}"
+                                    alt="{{ $product->displayName() }}"
+                                    class="h-28 w-28 object-contain {{ $line?->is_purchased ? 'grayscale' : '' }}"
+                                >
+                            @else
+                                <div class="flex h-28 w-28 items-center justify-center rounded-2xl bg-gray-100 text-3xl font-semibold text-secondary-500 dark:bg-secondary-600 dark:text-white" aria-hidden="true">
+                                    {{ mb_strtoupper(mb_substr($product->displayName(), 0, 1)) }}
                                 </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                                {{ $filtersActive ? __('grocery.empty_filtered') : __('grocery.empty') }}
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        @if ($items->hasPages())
-            <div class="border-t border-gray-200 px-6 py-4 dark:border-gray-600">
-                {{ $items->links() }}
+                            @endif
+                        </div>
+
+                        <h2 class="text-center text-lg font-semibold {{ $line?->is_purchased ? 'line-through text-gray-400' : '' }}">
+                            {{ $product->displayName() }}
+                        </h2>
+                        @if ($product->brand)
+                            <p class="text-center text-sm text-gray-500 dark:text-gray-400">{{ $product->brand }}</p>
+                        @endif
+                        <p class="mb-4 text-center text-sm text-gray-500 dark:text-gray-400">{{ $product->unitLabel() }}</p>
+
+                        <div class="mt-auto flex items-center justify-center gap-3">
+                            <button
+                                type="button"
+                                wire:click="decrementProduct({{ $product->id }})"
+                                wire:loading.attr="disabled"
+                                @disabled(! $onList)
+                                class="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-secondary-500 enabled:hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:text-white dark:enabled:hover:bg-secondary-600"
+                                title="{{ __('grocery.list.remove') }}"
+                                aria-label="{{ __('grocery.list.remove') }}"
+                            >
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14" />
+                                </svg>
+                            </button>
+                            <div class="min-w-[3rem] text-center">
+                                <span class="text-xl font-semibold">{{ $quantity }}</span>
+                                <span class="sr-only">{{ __('grocery.table.quantity') }}</span>
+                            </div>
+                            <button
+                                type="button"
+                                wire:click="incrementProduct({{ $product->id }})"
+                                wire:loading.attr="disabled"
+                                class="flex h-11 w-11 items-center justify-center rounded-full bg-secondary-500 text-white hover:opacity-90 dark:bg-white dark:text-secondary-500"
+                                title="{{ __('grocery.list.add') }}"
+                                aria-label="{{ __('grocery.list.add') }}"
+                            >
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+                                </svg>
+                            </button>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+        @endif
+
+        @if ($products->hasPages())
+            <div class="mt-6 border-t border-gray-200 px-2 py-4 dark:border-gray-600">
+                {{ $products->links() }}
             </div>
         @endif
     </div>

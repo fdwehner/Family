@@ -2,10 +2,11 @@
 
 namespace Tests\Feature\Grocery;
 
-use App\Livewire\Forms\GroceryItemForm;
 use App\Livewire\GroceryItemsIndex;
 use App\Models\GroceryItem;
+use App\Models\GroceryProduct;
 use App\Models\User;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -19,88 +20,72 @@ class GroceryItemTest extends TestCase
         $this->get(route('groceries.index'))->assertRedirect(route('login'));
     }
 
-    public function test_users_can_view_only_their_own_items(): void
+    public function test_users_see_pictured_staples_and_not_other_users_products(): void
     {
         $user = User::factory()->create();
         $other = User::factory()->create();
 
-        GroceryItem::factory()->for($user)->create(['name' => 'Milk']);
-        GroceryItem::factory()->for($other)->create(['name' => 'Secret Coffee']);
+        GroceryProduct::factory()->for($other)->create([
+            'name' => 'Secret Coffee',
+            'is_featured' => true,
+        ]);
 
         $this->actingAs($user)
             ->get(route('groceries.index'))
             ->assertOk()
-            ->assertSee('Milk', false)
+            ->assertSee(__('grocery.catalog.milk'), false)
+            ->assertSee(__('grocery.catalog.coke'), false)
+            ->assertSee(__('grocery.catalog.eggs'), false)
             ->assertDontSee('Secret Coffee');
     }
 
-    public function test_users_can_create_a_grocery_item(): void
+    public function test_plus_adds_a_product_to_the_list_and_minus_removes_it(): void
     {
         $user = User::factory()->create();
 
-        Livewire::actingAs($user)
-            ->test(GroceryItemForm::class)
-            ->set('name', 'Milk')
-            ->set('quantity', '2')
-            ->set('unit', 'l')
-            ->set('category', 'dairy')
-            ->set('notes', 'Organic')
-            ->call('save')
-            ->assertHasNoErrors()
-            ->assertRedirect(route('groceries.index'));
+        $component = Livewire::actingAs($user)->test(GroceryItemsIndex::class);
+        $milk = GroceryProduct::query()
+            ->forUser($user)
+            ->where('slug', 'milk')
+            ->firstOrFail();
+
+        $component->call('incrementProduct', $milk->id)->assertHasNoErrors();
 
         $this->assertDatabaseHas('grocery_items', [
             'user_id' => $user->id,
-            'name' => 'Milk',
-            'category' => 'dairy',
+            'grocery_product_id' => $milk->id,
+            'quantity' => 1,
             'is_purchased' => false,
         ]);
-    }
 
-    public function test_item_name_is_required(): void
-    {
-        $user = User::factory()->create();
+        $component->call('incrementProduct', $milk->id)->assertHasNoErrors();
+        $this->assertEquals(2, (float) GroceryItem::query()->forUser($user)->where('grocery_product_id', $milk->id)->value('quantity'));
 
-        Livewire::actingAs($user)
-            ->test(GroceryItemForm::class)
-            ->set('name', '')
-            ->set('category', 'dairy')
-            ->call('save')
-            ->assertHasErrors(['name']);
-    }
+        $component->call('decrementProduct', $milk->id)->assertHasNoErrors();
+        $component->call('decrementProduct', $milk->id)->assertHasNoErrors();
 
-    public function test_users_can_update_their_item(): void
-    {
-        $user = User::factory()->create();
-        $item = GroceryItem::factory()->for($user)->create(['name' => 'Milk']);
-
-        Livewire::actingAs($user)
-            ->test(GroceryItemForm::class, ['groceryItem' => $item])
-            ->set('name', 'Oat milk')
-            ->call('save')
-            ->assertHasNoErrors()
-            ->assertRedirect(route('groceries.index'));
-
-        $this->assertDatabaseHas('grocery_items', [
-            'id' => $item->id,
-            'name' => 'Oat milk',
+        $this->assertDatabaseMissing('grocery_items', [
+            'user_id' => $user->id,
+            'grocery_product_id' => $milk->id,
         ]);
     }
 
-    public function test_users_cannot_edit_another_users_item(): void
+    public function test_users_cannot_add_another_users_product_to_their_list(): void
     {
         $user = User::factory()->create();
-        $item = GroceryItem::factory()->create(['name' => 'Secret Coffee']);
+        $product = GroceryProduct::factory()->create();
 
-        $this->actingAs($user)
-            ->get(route('groceries.edit', $item))
-            ->assertNotFound();
+        $this->expectException(ModelNotFoundException::class);
+
+        Livewire::actingAs($user)
+            ->test(GroceryItemsIndex::class)
+            ->call('incrementProduct', $product->id);
     }
 
-    public function test_users_can_toggle_purchased_and_delete_items(): void
+    public function test_users_can_toggle_purchased_and_clear_purchased_items(): void
     {
         $user = User::factory()->create();
-        $item = GroceryItem::factory()->for($user)->create(['name' => 'Bread']);
+        $item = GroceryItem::factory()->for($user)->create();
 
         Livewire::actingAs($user)
             ->test(GroceryItemsIndex::class)
@@ -109,43 +94,40 @@ class GroceryItemTest extends TestCase
 
         $this->assertTrue($item->fresh()->is_purchased);
 
-        Livewire::actingAs($user)
-            ->test(GroceryItemsIndex::class)
-            ->call('deleteItem', $item->id)
-            ->assertHasNoErrors();
-
-        $this->assertDatabaseMissing('grocery_items', ['id' => $item->id]);
-    }
-
-    public function test_search_filters_the_list(): void
-    {
-        $user = User::factory()->create();
-        GroceryItem::factory()->for($user)->create(['name' => 'Milk']);
-        GroceryItem::factory()->for($user)->create(['name' => 'Apples']);
-
-        Livewire::actingAs($user)
-            ->test(GroceryItemsIndex::class)
-            ->set('search', 'Milk')
-            ->assertSee('Milk', false)
-            ->assertDontSee('Apples');
-    }
-
-    public function test_clearing_purchased_items_only_removes_the_current_users_purchased_rows(): void
-    {
-        $user = User::factory()->create();
+        $needed = GroceryItem::factory()->for($user)->create();
         $other = User::factory()->create();
-
-        $purchased = GroceryItem::factory()->for($user)->purchased()->create(['name' => 'Butter']);
-        $needed = GroceryItem::factory()->for($user)->create(['name' => 'Eggs']);
-        $otherPurchased = GroceryItem::factory()->for($other)->purchased()->create(['name' => 'Juice']);
+        $otherPurchased = GroceryItem::factory()->for($other)->purchased()->create();
 
         Livewire::actingAs($user)
             ->test(GroceryItemsIndex::class)
             ->call('clearPurchased')
             ->assertHasNoErrors();
 
-        $this->assertDatabaseMissing('grocery_items', ['id' => $purchased->id]);
+        $this->assertDatabaseMissing('grocery_items', ['id' => $item->id]);
         $this->assertDatabaseHas('grocery_items', ['id' => $needed->id]);
         $this->assertDatabaseHas('grocery_items', ['id' => $otherPurchased->id]);
+    }
+
+    public function test_search_filters_the_pictured_catalog(): void
+    {
+        $user = User::factory()->create();
+
+        Livewire::actingAs($user)
+            ->test(GroceryItemsIndex::class)
+            ->set('search', 'Milk')
+            ->assertSee(__('grocery.catalog.milk'), false)
+            ->assertDontSee(__('grocery.catalog.apples'), false);
+    }
+
+    public function test_hidden_products_are_not_shown_on_the_list(): void
+    {
+        $user = User::factory()->create();
+        GroceryProduct::factory()->for($user)->hiddenFromList()->create([
+            'name' => 'Hidden Spice Blend',
+        ]);
+
+        Livewire::actingAs($user)
+            ->test(GroceryItemsIndex::class)
+            ->assertDontSee('Hidden Spice Blend');
     }
 }

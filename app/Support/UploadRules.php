@@ -15,6 +15,16 @@ final class UploadRules
     }
 
     /**
+     * Grocery product photos reuse the shared image allowlist and size limit.
+     *
+     * @return list<string>
+     */
+    public static function groceryPhoto(): array
+    {
+        return self::image();
+    }
+
+    /**
      * Shared document upload rules (office/PDF/CSV/text; 10 MB).
      *
      * @return list<string>

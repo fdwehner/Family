@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Livewire\Forms\LoginForm;
 use App\Livewire\Forms\RegisterForm;
+use App\Models\GroceryProduct;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -32,6 +33,9 @@ class AuthenticationTest extends TestCase
 
         $this->assertAuthenticated();
         $this->assertDatabaseHas('users', ['email' => 'ada@example.com']);
+        $user = User::query()->where('email', 'ada@example.com')->first();
+        $this->assertNotNull($user?->grocery_catalog_seeded_at);
+        $this->assertGreaterThanOrEqual(3, GroceryProduct::query()->where('user_id', $user->id)->count());
     }
 
     public function test_users_can_log_in(): void

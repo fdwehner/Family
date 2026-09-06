@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\LocaleController;
-use App\Models\GroceryItem;
+use App\Models\GroceryProduct;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -27,8 +27,11 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 
 Route::middleware('auth')->group(function () {
     Route::get('/groceries', fn () => view('groceries.index'))->name('groceries.index');
-    Route::get('/groceries/create', fn () => view('groceries.create'))->name('groceries.create');
-    Route::get('/groceries/{groceryItem}/edit', function (GroceryItem $groceryItem) {
-        return view('groceries.edit', ['groceryItem' => $groceryItem]);
-    })->name('groceries.edit');
+    Route::get('/master-data/grocery-products', fn () => view('master-data.grocery-products.index'))
+        ->name('master-data.grocery-products.index');
+    Route::get('/master-data/grocery-products/create', fn () => view('master-data.grocery-products.create'))
+        ->name('master-data.grocery-products.create');
+    Route::get('/master-data/grocery-products/{groceryProduct}/edit', function (GroceryProduct $groceryProduct) {
+        return view('master-data.grocery-products.edit', ['groceryProduct' => $groceryProduct]);
+    })->name('master-data.grocery-products.edit');
 });

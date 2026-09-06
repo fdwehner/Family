@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'grocery_catalog_seeded_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -25,6 +25,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'grocery_catalog_seeded_at' => 'datetime',
         ];
     }
 
@@ -34,5 +35,13 @@ class User extends Authenticatable
     public function groceryItems(): HasMany
     {
         return $this->hasMany(GroceryItem::class);
+    }
+
+    /**
+     * @return HasMany<GroceryProduct, $this>
+     */
+    public function groceryProducts(): HasMany
+    {
+        return $this->hasMany(GroceryProduct::class);
     }
 }

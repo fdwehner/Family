@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Support\GroceryCatalog;
+use App\Support\UploadRules;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
@@ -14,12 +15,14 @@ class FormValidationService
     public function getValidationRules(string $form): array
     {
         return match ($form) {
-            'grocery_item' => [
+            'grocery_product' => [
                 'name' => ['required', 'string', 'max:255'],
-                'quantity' => ['nullable', 'numeric', 'min:0', 'max:9999.99'],
-                'unit' => ['nullable', 'string', Rule::in(GroceryCatalog::units())],
+                'brand' => ['nullable', 'string', 'max:255'],
+                'unit' => ['required', 'string', Rule::in(GroceryCatalog::units())],
                 'category' => ['required', 'string', Rule::in(GroceryCatalog::categories())],
-                'notes' => ['nullable', 'string', 'max:1000'],
+                'photo' => ['nullable', ...UploadRules::groceryPhoto()],
+                'is_featured' => ['boolean'],
+                'sort_order' => ['required', 'integer', 'min:0', 'max:9999'],
             ],
             'login' => [
                 'email' => ['required', 'string', 'email', 'max:255'],
@@ -40,10 +43,11 @@ class FormValidationService
     public function getValidationMessages(string $form): array
     {
         return match ($form) {
-            'grocery_item' => [
+            'grocery_product' => [
                 'name.required' => __('grocery.validation.name_required'),
                 'category.required' => __('grocery.validation.category_required'),
                 'category.in' => __('grocery.validation.category_invalid'),
+                'unit.required' => __('grocery.validation.unit_required'),
                 'unit.in' => __('grocery.validation.unit_invalid'),
             ],
             'login' => [

@@ -3,10 +3,14 @@
 namespace App\Livewire;
 
 use App\Models\GroceryItem;
+use App\Models\GroceryProduct;
+use App\Services\GroceryProductCatalogService;
+use App\Support\DefaultGroceryCatalog;
 use App\Support\GroceryCatalog;
 use App\Traits\LogsActivity;
 use App\Traits\WithToastNotifications;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -38,6 +42,7 @@ class GroceryItemsIndex extends Component
     public function mount(): void
     {
         $this->authorize('viewAny', GroceryItem::class);
+        app(GroceryProductCatalogService::class)->ensureDefaults(auth()->user());
         $this->filtersOpen = request()->anyFilled(['search', 'status', 'category']);
     }
 
@@ -64,6 +69,71 @@ class GroceryItemsIndex extends Component
         $this->resetPage();
     }
 
+    public function incrementProduct(int $id): void
+    {
+        $product = $this->ownedProduct($id);
+        $this->authorize('view', $product);
+
+        DB::transaction(function () use ($product): void {
+            $item = GroceryItem::query()
+                ->forUser(auth()->user())
+                ->where('grocery_product_id', $product->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($item) {
+                $this->authorize('update', $item);
+                $quantity = min(9999, (float) $item->quantity + 1);
+                $item->forceFill(['quantity' => $quantity])->save();
+
+                if ($item->is_purchased) {
+                    $item->markUnpurchased();
+                }
+
+                return;
+            }
+
+            $this->authorize('create', GroceryItem::class);
+
+            GroceryItem::query()->create([
+                'user_id' => auth()->id(),
+                'grocery_product_id' => $product->id,
+                'quantity' => 1,
+                'is_purchased' => false,
+            ]);
+        });
+    }
+
+    public function decrementProduct(int $id): void
+    {
+        $product = $this->ownedProduct($id);
+        $this->authorize('view', $product);
+
+        DB::transaction(function () use ($product): void {
+            $item = GroceryItem::query()
+                ->forUser(auth()->user())
+                ->where('grocery_product_id', $product->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($item === null) {
+                return;
+            }
+
+            $quantity = (float) $item->quantity - 1;
+
+            if ($quantity <= 0) {
+                $this->authorize('delete', $item);
+                $item->delete();
+
+                return;
+            }
+
+            $this->authorize('update', $item);
+            $item->forceFill(['quantity' => $quantity])->save();
+        });
+    }
+
     public function togglePurchased(int $id): void
     {
         $item = $this->ownedItem($id);
@@ -80,38 +150,6 @@ class GroceryItemsIndex extends Component
         $this->logCrud('updated', $item, [
             'is_purchased' => $item->is_purchased,
         ]);
-    }
-
-    public function requestDelete(int $id): void
-    {
-        $item = $this->ownedItem($id);
-        $this->authorize('delete', $item);
-
-        $this->dispatch('open-confirmation',
-            title: __('grocery.delete.title'),
-            message: __('grocery.messages.confirm_delete', ['name' => $item->name]),
-            confirmEvent: 'delete-grocery-item',
-            payload: $id,
-        );
-    }
-
-    #[On('delete-grocery-item')]
-    public function deleteItem(int $id): void
-    {
-        try {
-            $item = $this->ownedItem($id);
-            $this->authorize('delete', $item);
-            $name = $item->name;
-            $item->delete();
-            $this->logCrud('deleted', $item, ['name' => $name]);
-            $this->toastSuccess(__('grocery.messages.deleted'));
-        } catch (\Throwable $exception) {
-            $this->logError('Failed to delete grocery item', [
-                'error' => $exception->getMessage(),
-                'grocery_item_id' => $id,
-            ]);
-            $this->toastError(__('common.messages.error'));
-        }
     }
 
     public function requestClearPurchased(): void
@@ -155,13 +193,39 @@ class GroceryItemsIndex extends Component
             'purchased' => (clone $baseQuery)->where('is_purchased', true)->count(),
         ];
 
-        $items = GroceryItem::query()
+        $listItems = GroceryItem::query()
+            ->forUser($user)
+            ->get()
+            ->keyBy('grocery_product_id');
+
+        $onListIds = $listItems->keys()->all();
+        $neededIds = $listItems->where('is_purchased', false)->keys()->all();
+        $purchasedIds = $listItems->where('is_purchased', true)->keys()->all();
+
+        $products = GroceryProduct::query()
             ->forUser($user)
             ->when($search !== '', function ($query) use ($search) {
-                $query->where('name', 'like', '%'.$search.'%');
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('brand', 'like', '%'.$search.'%');
+
+                    $matchingSlugs = DefaultGroceryCatalog::slugsMatching($search);
+                    if ($matchingSlugs !== []) {
+                        $inner->orWhereIn('slug', $matchingSlugs);
+                    }
+                });
             })
-            ->when($this->status === 'needed', fn ($query) => $query->where('is_purchased', false))
-            ->when($this->status === 'purchased', fn ($query) => $query->where('is_purchased', true))
+            ->when($this->status === 'needed', fn ($query) => $query->whereIn('id', $neededIds ?: [0]))
+            ->when($this->status === 'purchased', fn ($query) => $query->whereIn('id', $purchasedIds ?: [0]))
+            ->when($this->status === '', function ($query) use ($onListIds) {
+                $query->where(function ($inner) use ($onListIds) {
+                    $inner->where('is_featured', true);
+
+                    if ($onListIds !== []) {
+                        $inner->orWhereIn('id', $onListIds);
+                    }
+                });
+            })
             ->when($this->category !== '', function ($query) {
                 $validatedCategory = in_array($this->category, GroceryCatalog::categories(), true)
                     ? $this->category
@@ -171,14 +235,15 @@ class GroceryItemsIndex extends Component
                     $query->where('category', $validatedCategory);
                 }
             })
-            ->orderBy('is_purchased')
+            ->orderBy('sort_order')
             ->orderBy('name')
-            ->paginate(15);
+            ->paginate(24);
 
         $filtersActive = $this->search !== '' || $this->status !== '' || $this->category !== '';
 
         return view('livewire.grocery-items-index', [
-            'items' => $items,
+            'products' => $products,
+            'listItems' => $listItems,
             'stats' => $stats,
             'categories' => GroceryCatalog::categories(),
             'filtersActive' => $filtersActive,
@@ -188,6 +253,13 @@ class GroceryItemsIndex extends Component
     private function ownedItem(int $id): GroceryItem
     {
         return GroceryItem::query()
+            ->forUser(auth()->user())
+            ->findOrFail($id);
+    }
+
+    private function ownedProduct(int $id): GroceryProduct
+    {
+        return GroceryProduct::query()
             ->forUser(auth()->user())
             ->findOrFail($id);
     }

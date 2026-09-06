@@ -3,6 +3,7 @@
 namespace App\Livewire\Forms;
 
 use App\Models\User;
+use App\Services\GroceryProductCatalogService;
 use App\Traits\FormValidationTrait;
 use App\Traits\LogsActivity;
 use App\Traits\WithToastNotifications;
@@ -55,6 +56,8 @@ class RegisterForm extends Component
                 'email' => $validated['email'],
                 'password' => $validated['password'],
             ]);
+
+            app(GroceryProductCatalogService::class)->ensureDefaults($user);
 
             event(new Registered($user));
 

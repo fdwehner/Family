@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Support\GroceryCatalog;
 use Database\Factories\GroceryItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -10,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'name', 'quantity', 'unit', 'category', 'notes', 'is_purchased', 'purchased_at'])]
+#[Fillable(['user_id', 'grocery_product_id', 'quantity', 'is_purchased', 'purchased_at'])]
 class GroceryItem extends Model
 {
     /** @use HasFactory<GroceryItemFactory> */
@@ -34,6 +33,14 @@ class GroceryItem extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return BelongsTo<GroceryProduct, $this>
+     */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(GroceryProduct::class, 'grocery_product_id');
     }
 
     /**
@@ -61,13 +68,19 @@ class GroceryItem extends Model
         ])->save();
     }
 
-    public function categoryLabel(): string
+    public function displayName(): string
     {
-        return GroceryCatalog::categoryLabel($this->category);
+        return $this->product?->displayName() ?? '';
     }
 
-    public function unitLabel(): string
+    public function formattedQuantity(): string
     {
-        return GroceryCatalog::unitLabel($this->unit);
+        $quantity = (float) $this->quantity;
+
+        if (abs($quantity - round($quantity)) < 0.001) {
+            return (string) (int) round($quantity);
+        }
+
+        return rtrim(rtrim(number_format($quantity, 2, '.', ''), '0'), '.');
     }
 }

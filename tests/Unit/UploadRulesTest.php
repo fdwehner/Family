@@ -15,6 +15,11 @@ class UploadRulesTest extends TestCase
         );
     }
 
+    public function test_grocery_photo_rules_reuse_the_shared_image_allowlist(): void
+    {
+        $this->assertSame(UploadRules::image(), UploadRules::groceryPhoto());
+    }
+
     public function test_document_rules_are_centralized(): void
     {
         $this->assertSame(

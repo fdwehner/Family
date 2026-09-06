@@ -3,8 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\GroceryItem;
+use App\Models\GroceryProduct;
 use App\Models\User;
-use App\Support\GroceryCatalog;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,14 +19,28 @@ class GroceryItemFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'name' => fake()->words(2, true),
-            'quantity' => fake()->randomElement([1, 2, 3, 0.5, 1.5]),
-            'unit' => fake()->randomElement(GroceryCatalog::units()),
-            'category' => fake()->randomElement(GroceryCatalog::categories()),
-            'notes' => fake()->optional()->sentence(),
+            'quantity' => fake()->randomElement([1, 2, 3]),
             'is_purchased' => false,
             'purchased_at' => null,
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterMaking(function (GroceryItem $item): void {
+            if ($item->grocery_product_id) {
+                return;
+            }
+
+            $userId = $item->user_id ?: User::factory()->create()->id;
+            $item->user_id = $userId;
+
+            $product = GroceryProduct::factory()->create([
+                'user_id' => $userId,
+            ]);
+
+            $item->grocery_product_id = $product->id;
+        });
     }
 
     public function purchased(): static

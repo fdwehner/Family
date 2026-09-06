@@ -4,7 +4,7 @@ return [
     'welcome' => [
         'title' => 'Family',
         'subtitle' => 'Verwalten Sie die Einkaufsliste Ihres Haushalts.',
-        'contributing' => 'Fügen Sie Artikel hinzu, filtern Sie nach Kategorie und haken Sie sie beim Einkauf ab.',
+        'contributing' => 'Tippen Sie Plus oder Minus bei den Produktbildern und haken Sie Artikel beim Einkauf ab.',
         'switch_language' => 'Sprache',
         'cta_login' => 'Anmelden',
         'cta_register' => 'Konto erstellen',
